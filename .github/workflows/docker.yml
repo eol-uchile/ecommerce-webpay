@@ -1,0 +1,22 @@
+name: Docker Image CI
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@master
+
+      - name: Build Docker image
+        run: docker build . --tag eoluchile/ecommerce-webpay:${GITHUB_SHA} --tag eoluchile/ecommerce-webpay:latest
+
+      - name: Push
+        run: |
+          echo "${DOCKERHUB_PASSWORD}" | docker login --username ${DOCKERHUB_USER} --password-stdin
+          docker push eoluchile/ecommerce-webpay:${GITHUB_SHA}
+          docker push eoluchile/ecommerce-webpay:latest
+        env:
+          DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USER }}
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
