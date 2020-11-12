@@ -1,0 +1,6 @@
+environment: INTEGRACION
+commerce_code: 597020000541
+our_keyfile: certs/597020000541.key
+our_certificate: certs/597020000541.crt
+their_certificate: certs/tbk.pem
+api_secret: my-secret-is-really-important
