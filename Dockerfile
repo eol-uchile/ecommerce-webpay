@@ -2,7 +2,7 @@ FROM ubuntu:16.04
 # Ubuntu 16 uses python 2.7 as default :muscle:
 
 RUN apt update && apt-get install libssl-dev libxml2-dev libxmlsec1-dev python-pip -y
-RUN pip install --upgrade pip
+RUN pip install pip==20.0.2
 WORKDIR /app
 
 COPY requirements.txt ./
