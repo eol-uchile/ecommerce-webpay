@@ -103,7 +103,7 @@ def get_transaction_data():
     "sessionId": result.sessionId,
     "transactionDate": str(result.transactionDate),
     "urlRedirection": result.urlRedirection,
-    "VCI": result.VCI,
+    #"VCI": result.VCI,
   }
 
 if __name__ == "__main__":
