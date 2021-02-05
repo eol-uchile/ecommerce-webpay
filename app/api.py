@@ -90,7 +90,7 @@ def get_transaction_data():
   return {
     "accountingDate": str(result.accountingDate),
     "buyOrder": str(result.buyOrder),
-    "cardDetail": result.cardDetail.cardNumber,
+    #"cardDetail": result.cardDetail.cardNumber,
     "detailOutput": [{
       "sharesNumber": detailOutput.sharesNumber,
       "amount": detailOutput.amount,
