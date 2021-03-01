@@ -1,110 +1,72 @@
 import yaml
 import json
+
+from json.decoder import JSONDecodeError
+
 from flask import Flask, request, jsonify, abort
-from suds.client import Client
-from suds.transport.https import HttpTransport
-from suds.wsse import Security, Timestamp
-from wsse.suds import WssePlugin
+from transbank.webpay.webpay_plus import WebpayPlus
+from transbank.webpay.webpay_plus.transaction import Transaction
 
 app = Flask(__name__)
-
-ENVIRONMNENT_URLS = {
-    'INTEGRACION': 'https://webpay3gint.transbank.cl/WSWebpayTransaction/cxf/WSWebpayService?wsdl',
-    'CERTIFICACION': 'https://webpay3gint.transbank.cl/WSWebpayTransaction/cxf/WSWebpayService?wsdl',
-    'PRODUCCION': 'https://webpay3g.transbank.cl/WSWebpayTransaction/cxf/WSWebpayService?wsdl',
-}
 
 with open('certs/config.yml') as file:
     config_file = yaml.load(file, Loader=yaml.FullLoader)
 
-def get_client():
+def configure_webpay():
   """
-  Get the webpay client for the environment
+  Get the webpay client for the ENVIRONMENT
   """
-  transport = HttpTransport()
-  wsse = Security()
-  wsdl_url = ENVIRONMNENT_URLS[config_file['environment']]
-  return Client(
-      wsdl_url,
-      transport=transport,
-      wsse=wsse,
-      plugins=[
-          WssePlugin(
-              keyfile=config_file['our_keyfile'],
-              certfile=config_file['our_certificate'],
-              their_certfile=config_file['their_certificate'],
-          ),
-      ],
-  )
+  if config_file['ENVIRONMENT'] == 'PRODUCCION':
+    WebpayPlus.configure_for_production(config_file['COMMERCE_CODE'], config_file['API_KEY'])
+  elif config_file['ENVIRONMENT'] == 'INTEGRACION':
+    WebpayPlus.configure_for_integration(config_file['COMMERCE_CODE'], config_file['API_KEY'])
+  else:
+    raise Exception("Invalid ENVIRONMENT type {}".format(config_file['ENVIRONMENT']))
+
+  if config_file['API_SECRET'] == '':
+    raise Exception('API_SECRET can\'t be empty')
 
 @app.route('/process-webpay', methods=['POST'])
 def process_payment():
-
   # Get POST data
-  basket = json.loads(request.data)
-  if config_file['api_secret'] != basket['api_secret']:
+  try:
+    basket = json.loads(request.data)
+  except JSONDecodeError as e:
+    print(e)
+    return abort(403)
+
+  if 'api_secret' not in basket or config_file['API_SECRET'] != basket['api_secret']:
     return abort(403)
 
   # Initilialize webpay
-  client = get_client()
-  client.options.cache.clear()
-  init = client.factory.create('wsInitTransactionInput')
+  configure_webpay()
 
-  init.wSTransactionType = client.factory.create('wsTransactionType').TR_NORMAL_WS
-  init.commerceId = config_file['commerce_code']
+  result = Transaction.create(
+          buy_order=basket['order_number'],
+          session_id=basket['order_number'],
+          amount=float(basket['total_incl_tax']),
+          return_url=basket['notify_url'])
 
-
-  init.buyOrder = basket['order_number']
-  init.sessionId = basket['order_number']
-  init.returnURL = basket['notify_url']
-  init.finalURL = basket['return_url']
-
-
-  detail = client.factory.create('wsTransactionDetail')
-  detail.amount = str(basket['total_incl_tax'])
-
-  detail.commerceCode = config_file['commerce_code']
-  detail.buyOrder = basket['order_number']
-
-  init.transactionDetails.append(detail)
-  init.wPMDetail = client.factory.create('wpmDetailInput')
-
-  result = client.service.initTransaction(init)
-
-  return {"token": result['token'], "url": result['url']}
+  return {"token": result.token, "url": result.url}
 
 @app.route('/get-transaction', methods=['POST'])
 def get_transaction_data():
   # Get POST data
-  data = json.loads(request.data)
-  if config_file['api_secret'] != data['api_secret']:
+  try:
+    data = json.loads(request.data)
+  except JSONDecodeError:
     return abort(403)
 
-  client = get_client()
-  client.options.cache.clear()
-  result = client.service.getTransactionResult(data['token'])
-  client.service.acknowledgeTransaction(data['token'])
+  if 'api_secret' not in data or config_file['API_SECRET'] != data['api_secret']:
+    return abort(403)
 
-  detailOutput = result.detailOutput[0]
+  # Initilialize webpay
+  configure_webpay()
 
-  return {
-    "accountingDate": str(result.accountingDate),
-    "buyOrder": str(result.buyOrder),
-    #"cardDetail": result.cardDetail.cardNumber,
-    "detailOutput": [{
-      "sharesNumber": detailOutput.sharesNumber,
-      "amount": detailOutput.amount,
-      "commerceCode": detailOutput.commerceCode,
-      "buyOrder": detailOutput.buyOrder,
-      "authorizationCode": detailOutput.authorizationCode,
-      "paymentTypeCode": detailOutput.paymentTypeCode,
-      "responseCode": detailOutput.responseCode,
-    }],
-    "sessionId": result.sessionId,
-    "transactionDate": str(result.transactionDate),
-    "urlRedirection": result.urlRedirection,
-    #"VCI": result.VCI,
-  }
+  # ACK the transaction
+  response = Transaction.commit(token=data['token'])
+
+  return json.dumps(response.__dict__)
 
 if __name__ == "__main__":
   if 'DEBUG' in config_file and config_file['DEBUG']:
