@@ -6,6 +6,8 @@ from json.decoder import JSONDecodeError
 from flask import Flask, request, jsonify, abort
 from transbank.webpay.webpay_plus import WebpayPlus
 from transbank.webpay.webpay_plus.transaction import Transaction
+from transbank.error.transaction_commit_error import TransactionCommitError
+from transbank.error.transaction_status_error import TransactionStatusError
 
 app = Flask(__name__)
 
@@ -64,7 +66,15 @@ def get_transaction_data():
   configure_webpay()
 
   # ACK the transaction
-  response = Transaction.commit(token=data['token'])
+  try:
+    response = Transaction.commit(token=data['token'])
+  except TransactionCommitError:
+    # On error, return the status of the token
+    try:
+      response = Transaction.status(token=data['token'])
+    except TransactionStatusError:
+      # Invalid token
+      return {"response_code": -1, "reason": "Invalid Token"}
 
   return json.dumps(response.__dict__)
 
