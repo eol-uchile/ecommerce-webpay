@@ -1,2 +1,0 @@
-class SignatureVerificationFailed(Exception):
-    pass
