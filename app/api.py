@@ -76,7 +76,7 @@ def get_transaction_data():
       # Invalid token
       return {"response_code": -1, "reason": "Invalid Token"}
 
-  return json.dumps(response.__dict__)
+  return json.dumps(response, default=lambda x: x.__dict__)
 
 if __name__ == "__main__":
   if 'DEBUG' in config_file and config_file['DEBUG']:
