@@ -34,7 +34,6 @@ def process_payment():
   try:
     basket = json.loads(request.data)
   except JSONDecodeError as e:
-    print(e)
     return abort(403)
 
   if 'api_secret' not in basket or config_file['API_SECRET'] != basket['api_secret']:
@@ -72,11 +71,32 @@ def get_transaction_data():
     # On error, return the status of the token
     try:
       response = Transaction.status(token=data['token'])
-    except TransactionStatusError:
+    except TransactionStatusError as e:
       # Invalid token
-      return {"response_code": -1, "reason": "Invalid Token"}
+      return {"response_code": -1, "reason": e.message}
 
   return json.dumps(response, default=lambda x: x.__dict__)
+
+@app.route('/transaction-status', methods=['POST'])
+def get_transaction_status():
+  # Get POST data
+  try:
+    data = json.loads(request.data)
+  except JSONDecodeError:
+    return abort(403)
+
+  if 'api_secret' not in data or config_file['API_SECRET'] != data['api_secret']:
+    return abort(403)
+
+  # Initilialize webpay
+  configure_webpay()
+
+  try:
+    response = Transaction.status(token=data['token'])
+    return json.dumps(response, default=lambda x: x.__dict__)
+  except TransactionStatusError as e:
+    return {"response_code": -1, "reason": e.message}
+
 
 if __name__ == "__main__":
   if 'DEBUG' in config_file and config_file['DEBUG']:
