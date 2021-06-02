@@ -12,6 +12,9 @@ jobs:
       - name: Build Docker image
         run: docker build . --tag eoluchile/ecommerce-webpay:${GITHUB_SHA}
 
+      - name: Run tests
+        run: docker run eoluchile/ecommerce-webpay:${GITHUB_SHA} bash -c "pip install pytest && pytest"
+
       - name: Push to Github Container Registry
         run: |
           echo "${CR_PAT}" | docker login ghcr.io -u eolito --password-stdin

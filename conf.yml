@@ -1,0 +1,4 @@
+ENVIRONMENT: INTEGRACION
+COMMERCE_CODE: "code"
+API_KEY: api_key
+API_SECRET: api_secret
