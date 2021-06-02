@@ -10,6 +10,6 @@ MarkupSafe==1.1.1
 marshmallow==2.15.6
 PyYAML==5.4.1
 requests==2.25.1
-transbank-sdk @ git+https://github.com/TransbankDevelopers/transbank-sdk-python@a4212c725483dedd61057a86b92f544204391942
+transbank-sdk @ git+https://github.com/TransbankDevelopers/transbank-sdk-python@367c2463b1cf7d7aee09539be451a0edddde23cf
 urllib3==1.26.3
 Werkzeug==1.0.1
