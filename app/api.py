@@ -41,13 +41,14 @@ def process_payment():
 
   # Initilialize webpay
   configure_webpay()
-
-  result = Transaction.create(
-          buy_order=basket['order_number'],
-          session_id=basket['order_number'],
-          amount=float(basket['total_incl_tax']),
-          return_url=basket['notify_url'])
-
+  try:
+    result = Transaction.create(
+            buy_order=basket['order_number'],
+            session_id=basket['order_number'],
+            amount=float(basket['total_incl_tax']),
+            return_url=basket['notify_url'])
+  except Exception as e:
+    raise Exception('Exception: {}, buy_order: {}, amount: {}, notify_url: {}'.format(str(e), basket['order_number'], basket['total_incl_tax'], basket['notify_url']))
   return {"token": result.token, "url": result.url}
 
 @app.route('/get-transaction', methods=['POST'])
