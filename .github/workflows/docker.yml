@@ -16,6 +16,7 @@ jobs:
         run: docker run eoluchile/ecommerce-webpay:${GITHUB_SHA} bash -c "pip install pytest && pytest"
 
       - name: Push to Github Container Registry
+        if: github.ref == 'refs/heads/master'
         run: |
           echo "${CR_PAT}" | docker login ghcr.io -u eolito --password-stdin
           docker tag eoluchile/ecommerce-webpay:${GITHUB_SHA} ghcr.io/eol-uchile/ecommerce-webpay:${GITHUB_SHA}
